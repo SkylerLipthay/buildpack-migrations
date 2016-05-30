@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
 if [ -f $1/Gemfile ]; then
-  echo "Gemfile found"
   if grep -q "gem [\"']rails['\"]" ${1}/Gemfile; then
-    echo "WITNESS ME"
+    echo "Migrateable"
     exit 0
   fi
 fi
 
-echo "It was hard to know who was more crazy: Me... Or everyone else."
 exit 1
