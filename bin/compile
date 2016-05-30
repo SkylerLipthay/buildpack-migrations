@@ -10,7 +10,6 @@ env_dir=$3
 if [ -d "$env_dir" ]; then
   blacklist_regex=${4:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
   for e in $(ls -1 $env_dir | grep -vE "$blacklist_regex"); do
-    echo "export $e=$(cat $env_dir/$e)"
     export "$e=$(cat $env_dir/$e)"
   done
 fi
@@ -31,7 +30,7 @@ done
 if [[ run_migrations -eq true ]]
 then
 cd $build_dir && \
-  bundle exec rake db:migrate
+  RAILS_ENV="${RAILS_ENV:-production}" bundle exec rake db:migrate
   if [ $? -eq 1 ]
   then
     echo "There was an error running migrations. Deploy halted."
