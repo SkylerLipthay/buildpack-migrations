@@ -27,12 +27,15 @@ for i in "${known[@]}"; do
   fi
 done
 
-if [[ run_migrations -eq true ]]
-then
-cd $build_dir && \
-  RAILS_ENV="${RAILS_ENV:-production}" bundle exec rake db:migrate
-  if [ $? -eq 1 ]
-  then
+if [[ run_migrations -eq true ]]; then
+  # In a Rails 3 app, it dumps schema with `-i`, which has been removed pg_dump
+  # Dumping the DB structure is kind of pointless as part of the Heroku build 
+  # process anyway, so just no-op it:
+  ln -s $(which true) /tmp/pg_dump
+  
+  cd $build_dir && \
+    PATH="/tmp:$PATH" RAILS_ENV="${RAILS_ENV:-production}" bundle exec rake db:migrate
+  if [ $? -eq 1 ]; then
     echo "There was an error running migrations. Deploy halted."
     exit 1
   fi
