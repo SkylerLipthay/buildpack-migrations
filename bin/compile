@@ -7,39 +7,30 @@ cache_dir=$2
 env_dir=$3
 
 #Load environment variables that may be needed to boot rails.
-blacklist_regex=${3:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
 if [ -d "$env_dir" ]; then
-  for e in $(ls $env_dir); do
-    echo "$e" | grep -qvE "$blacklist_regex" &&
-      export "$e=$(cat $env_dir/$e)"
-    :
+  blacklist_regex=${4:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
+  for e in $(ls -1 $env_dir | grep -vE "$blacklist_regex"); do
+    export "$e=$(cat $env_dir/$e)"
   done
 fi
 
-db_url=`cat ${3}/DATABASE_URL`
-migrations_done=(`psql ${db_url} --command="SELECT * FROM schema_migrations ORDER BY version DESC" --tuples-only`)
+migrations_done=(`psql ${DATABASE_URL} --command="SELECT * FROM schema_migrations ORDER BY version DESC" --tuples-only`)
 
 known=(`ls ${build_dir}/db/migrate`)
 
 run_migrations=false
 
-for i in "${known[@]}"
-do
+for i in "${known[@]}"; do
   num=`echo ${i} | awk -F "_" '{print $1}'`
-  if  ! [[ " ${migrations_done[@]} " =~ " ${num} " ]]
-  then
-    echo "mismatch"
+  if  ! [[ " ${migrations_done[@]} " =~ " ${num} " ]]; then
     run_migrations=true
   fi
 done
 
-
-
 if [[ run_migrations -eq true ]]
 then
 cd $build_dir && \
-  RACK_ENV=`cat ${3}/RACK_ENV` \
-  DATABASE_URL=`cat ${3}/DATABASE_URL` bundle exec rake db:migrate
+  bundle exec rake db:migrate
   if [ $? -eq 1 ]
   then
     echo "There was an error running migrations. Deploy halted."
@@ -48,9 +39,3 @@ cd $build_dir && \
 else
   echo "Not running migrations. No pending migrations found."
 fi
-
-path=`echo "${current_path}" | awk -F "compile" '{printf $1}'`
-ruby ${path}/output_mad_max
-
-echo "Finished compile script"
-exit 0
